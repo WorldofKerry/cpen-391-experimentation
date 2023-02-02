@@ -4,18 +4,22 @@ import math
 from matplotlib import pyplot as plt
 
 def process_image(img: list) -> list:
+    """
+    Input: 3D list of pixels in RGB format, where it's [channel][row][col]
+    Output: 3D list of pixels in RGB format, where it's [channel][row][col]
+    """
     channels, rows, cols = len(img), len(img[0]), len(img[0][0])
 
     output = [[[0 for _ in range(cols)] for _ in range(rows)] for _ in range(channels)]
 
     # gaussian blur
     for c in range(channels):
-        output[c] = gaussian_blur(img[c], 7, 7)
+        output[c] = gaussian_blur_2d(img[c], 3, 3)
 
     return output
 
 
-def gaussian_blur(img: list, kernel_size: int, sigma: int) -> list:
+def gaussian_blur_2d(img: list, kernel_size: int, sigma: int) -> list:
     kernel = []
     center = kernel_size // 2
     for i in range(kernel_size):
@@ -25,32 +29,38 @@ def gaussian_blur(img: list, kernel_size: int, sigma: int) -> list:
             y = j - center
             row.append(math.exp(-(x**2 + y**2) / (2 * sigma**2)))
         kernel.append(row)
-            
-    # display kernel scaled to 0-255
-    plt.subplot(1, 2, 1)
-    plt.imshow(np.array(kernel) * 255, cmap='gray')
+
+    img = convolution_2d(img, kernel)
 
     return img
 
 
-def convolution(img: list, kernel: list) -> list:
-    rows, cols = len(img), len(img[0])
-    kernel_size = len(kernel)
+def convolution_2d(img: list, kernel: list) -> list:
+    image_height = len(img)
+    image_width = len(img[0])
+    kernel_height = len(kernel)
+    kernel_width = len(kernel[0])
+    kernel_center = kernel_height // 2
+    output = [[0 for _ in range(image_width - kernel_width + 1)] for _ in range(image_height - kernel_height + 1)]
+    kernel_sum = sum(map(sum, kernel))
 
-    output = [[0 for _ in range(cols)] for _ in range(rows)]
-
-    for i in range(rows):
-        for j in range(cols):
-            for k in range(kernel_size):
-                for l in range(kernel_size):
-                    if i + k - kernel_size // 2 < 0 or i + k - kernel_size // 2 >= rows or j + l - kernel_size // 2 < 0 or j + l - kernel_size // 2 >= cols:
-                        continue
-                    output[i][j] += img[i + k - kernel_size // 2][j + l - kernel_size // 2] * kernel[k][l]
+    for i in range(image_height - kernel_height + 1):
+        for j in range(image_width - kernel_width + 1):
+            for m in range(kernel_height):
+                for n in range(kernel_width):
+                    ii = i + m - kernel_center
+                    jj = j + n - kernel_center
+                    output[i][j] += img[ii][jj] * kernel[m][n]
+    for i in range(len(output)):
+        for j in range(len(output[0])):
+            output[i][j] /= kernel_sum
 
     return output
 
-
 def main():
+    """
+    Wrapper function for converting from file to list and back to matplotlib display
+    """
     img_np = cv2.imread('scene1.jpg')
     img_np = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
     
@@ -61,14 +71,16 @@ def main():
         img_np = cv2.resize(img_np, (0, 0), fx=scale, fy=scale)
 
     # convert to python list
+    img_np = np.transpose(img_np, (2, 0, 1))
     img = img_np.tolist()
 
     # process image
     img = process_image(img)
 
     # display image
-    img_np = np.array(img).astype(np.uint8)
-    plt.subplot(1, 2, 2)
+    img_np = np.transpose(img, (1, 2, 0))
+    img_np = np.array(img_np).astype(np.uint8)
+    plt.subplot(1, 1, 1)
     plt.imshow(img_np)
     plt.show()
 
