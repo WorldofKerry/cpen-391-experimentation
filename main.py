@@ -57,6 +57,7 @@ def convolution_2d(img: list, kernel: list) -> list:
 
     return output
 
+
 def main():
     """
     Wrapper function for converting from file to list and back to matplotlib display
@@ -83,6 +84,7 @@ def main():
     plt.subplot(1, 1, 1)
     plt.imshow(img_np)
     plt.show()
+
 
 if __name__ == '__main__':
     main()
