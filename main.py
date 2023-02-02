@@ -5,8 +5,8 @@ from matplotlib import pyplot as plt
 
 def process_image(img: list) -> list:
     """
-    Input: 3D list of pixels in RGB format, where it's [channel][row][col]
-    Output: 3D list of pixels in RGB format, where it's [channel][row][col]
+    Input: 3D list of pixels in RGB 0-255 format, where it's [channel][row][col]
+    Output: 3D list of pixels in RGB 0-255 format, where it's [channel][row][col]
     """
     channels, rows, cols = len(img), len(img[0]), len(img[0][0])
 
@@ -20,6 +20,9 @@ def process_image(img: list) -> list:
 
 
 def gaussian_blur_2d(img: list, kernel_size: int, sigma: int) -> list:
+    """
+    Gaussian blur with only python lists
+    """
     kernel = []
     center = kernel_size // 2
     for i in range(kernel_size):
@@ -36,6 +39,9 @@ def gaussian_blur_2d(img: list, kernel_size: int, sigma: int) -> list:
 
 
 def convolution_2d(img: list, kernel: list) -> list:
+    """
+    2D convolution with only python lists
+    """
     image_height = len(img)
     image_width = len(img[0])
     kernel_height = len(kernel)
@@ -61,6 +67,7 @@ def convolution_2d(img: list, kernel: list) -> list:
 def main():
     """
     Wrapper function for converting from file to list and back to matplotlib display
+    Uses library functions to read and display image
     """
     img_np = cv2.imread('scene1.jpg')
     img_np = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
