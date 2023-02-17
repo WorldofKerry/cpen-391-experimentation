@@ -3,6 +3,7 @@ import mediapipe as mp
 import numpy as np
 import json
 import time
+import argparse
 
 def get_stick_figure_lines(landmarks, frame): 
     connections = [(12, 11), (11, 23), (24, 23), (24, 12), (24, 26), (26, 28), (23, 25), (25, 27), (28, 32), (32, 30), (28, 30), (27, 31), (29, 31), (27, 29), (14, 12), (14, 16), (11, 13), (13, 15), (8, 6), (3, 7), (10, 9), (6, 5), (5, 4), (4, 0), (3, 2), (2, 1), (1, 0), (16, 18), (18, 20), (20, 16), (16, 22), (15, 21), (15, 19), (19, 17), (17, 15), (12, 23), (11, 24)]
@@ -87,6 +88,12 @@ def playback_poses(fileName: str = None) -> None:
             last_draw_time = time.time()
             if line_sets: 
                 line_set = line_sets.pop(0)
+                # flash
+                white = np.zeros_like(frame)
+                white.fill(255)
+                for _ in range(3):
+                    cv2.imshow('Stick Figure', white)
+                    cv2.waitKey(1)
             else: 
                 break
         if landmarks is not None:
@@ -104,8 +111,15 @@ def playback_poses(fileName: str = None) -> None:
     cap.release()
     cv2.destroyAllWindows()
     
-def main(): 
-    playback_poses(fileName='lines.json')
-
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser(description='Record and playback poses')
+    parser.add_argument('-r', '--record', action='store_true', help='record poses')
+    parser.add_argument('-p', '--playback', action='store_true', help='playback poses')
+    args = parser.parse_args()
+
+    if args.record:
+        record_poses(fileName='lines.json')
+    elif args.playback:
+        playback_poses(fileName='lines.json')
+    else:
+        print('Please specify either record or playback')
