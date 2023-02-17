@@ -18,22 +18,20 @@ def get_stick_figure_lines(landmarks, frame):
 def create_stick_figure(landmarks: mp.solutions.pose.Pose, frame: np.ndarray, save_lines: bool = False, fileName: str = None) -> np.ndarray:
     """
     returns the stick figure line set
-    saves the the last 10 line-sets every 3 seconds in a fileName if save_lines is True
+    saves the the last 10 line-sets in fileName if save_lines is True
     """
     stick_figure = np.zeros_like(frame)
     lines = get_stick_figure_lines(landmarks, frame)
     for line in lines:
         cv2.line(stick_figure, line[0:2], line[2:4], (0, 255, 0), 2)
-    if save_lines and time.time() - create_stick_figure.last_save_time > 3: # save every 3 seconds
+    if save_lines: 
         if len(create_stick_figure.line_sets) > 10: # record last 10 line-sets
             create_stick_figure.line_sets.pop(0)
         create_stick_figure.line_sets.append(lines)
-        create_stick_figure.last_save_time = time.time()
         with open(fileName, 'w') as outfile:
             json.dump(create_stick_figure.line_sets, outfile)
     return stick_figure
 create_stick_figure.line_sets = []
-create_stick_figure.last_save_time = 0
 
 def blend_images(frame: np.ndarray, stick_figure: np.ndarray, alpha=0.5) -> np.ndarray:
     blended = cv2.addWeighted(frame, alpha, stick_figure, 1 - alpha, 0)
@@ -48,16 +46,66 @@ def record_poses(fileName: str = None) -> None:
         pose = mp_pose.process(image=rgb)
         landmarks = pose.pose_landmarks
         if landmarks is not None:
-            stick_figure = create_stick_figure(landmarks, frame, save_lines=True, fileName=fileName)
+            if time.time() - record_poses.last_save_time > 3:
+                # save lines and make the imshow flash white
+                stick_figure = create_stick_figure(landmarks, frame, save_lines=True, fileName=fileName)
+                record_poses.last_save_time = time.time()
+                white = np.zeros_like(frame)
+                white.fill(255)
+                for _ in range(3):
+                    cv2.imshow('Stick Figure', white)
+                    cv2.waitKey(1)
+            else: 
+                stick_figure = create_stick_figure(landmarks, frame)
             blended = blend_images(frame, stick_figure)
+            # mirror image horizontally
+            blended = cv2.flip(blended, 1)
             cv2.imshow('Stick Figure', blended)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     cap.release()
     cv2.destroyAllWindows()
+record_poses.last_save_time = 0
 
+def playback_poses(fileName: str = None) -> None:
+    """
+    displays the current webcam, 
+    overlayed are the poses in the file in green, going to the next pose every 5 seconds, 
+    overlayed is the current poses in red. 
+    """
+    mp_pose = mp.solutions.pose.Pose()
+    cap = cv2.VideoCapture(0)
+    last_draw_time = 0
+    with open(fileName) as json_file:
+        line_sets = json.load(json_file)
+    while True:
+        _, frame = cap.read()
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pose = mp_pose.process(image=rgb)
+        landmarks = pose.pose_landmarks
+        if time.time() - last_draw_time > 5:
+            last_draw_time = time.time()
+            if line_sets: 
+                line_set = line_sets.pop(0)
+            else: 
+                break
+        if landmarks is not None:
+            stick_figure = create_stick_figure(landmarks, frame)
+        else: 
+            stick_figure = np.zeros_like(frame)
+        for line in line_set:
+            cv2.line(stick_figure, line[0:2], line[2:4], (255, 0, 0), 2)
+        blended = blend_images(frame, stick_figure)
+        # mirror image horizontally
+        blended = cv2.flip(blended, 1)
+        cv2.imshow('Stick Figure', blended)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+    cap.release()
+    cv2.destroyAllWindows()
+    
 def main(): 
-    record_poses(fileName='lines.json')
+    playback_poses(fileName='lines.json')
 
 if __name__ == '__main__':
     main()
