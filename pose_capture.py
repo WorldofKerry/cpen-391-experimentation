@@ -6,24 +6,33 @@ import time
 import argparse
 import math
 
-def get_stick_figure_lines(landmarks, frame): 
+def get_stick_figure_lines(landmarks, frame: np.ndarray) -> list:
     connections = [(12, 11), (11, 23), (24, 23), (24, 12), (24, 26), (26, 28), (23, 25), (25, 27), (28, 32), (32, 30), (28, 30), (27, 31), (29, 31), (27, 29), (14, 12), (14, 16), (11, 13), (13, 15), (8, 6), (3, 7), (10, 9), (6, 5), (5, 4), (4, 0), (3, 2), (2, 1), (1, 0), (16, 18), (18, 20), (20, 16), (16, 22), (15, 21), (15, 19), (19, 17), (17, 15), (12, 23), (11, 24)]
     lines = []
-    for connection in connections:
-        x1 = int(landmarks[connection[0]].x * frame.shape[1])
-        y1 = int(landmarks[connection[0]].y * frame.shape[0])
-        x2 = int(landmarks[connection[1]].x * frame.shape[1])
-        y2 = int(landmarks[connection[1]].y * frame.shape[0])
-        lines.append((x1, y1, x2, y2))
+    # TODO: fix jank try except
+    try: 
+        for connection in connections:
+            x1 = int(landmarks.landmark[connection[0]].x * frame.shape[1])
+            y1 = int(landmarks.landmark[connection[0]].y * frame.shape[0])
+            x2 = int(landmarks.landmark[connection[1]].x * frame.shape[1])
+            y2 = int(landmarks.landmark[connection[1]].y * frame.shape[0])
+            lines.append((x1, y1, x2, y2))
+    except: 
+        for connection in connections: 
+            x1 = int(landmarks[connection[0]][0])
+            y1 = int(landmarks[connection[0]][1])
+            x2 = int(landmarks[connection[1]][0])
+            y2 = int(landmarks[connection[1]][1])
+            lines.append((x1, y1, x2, y2))
     return lines
 
-def save_points(landmarks, frame: np.ndarray, fileName: str, period: float = 3, save_this_many_point_sets: int = 5) -> None:
+def save_points(landmarks: mp.solutions.pose.Pose, frame: np.ndarray, fileName: str, period: float = 3, save_this_many_point_sets: int = 5) -> None:
     if time.time() - save_points.last_save_time > period:
         save_points.last_save_time = time.time()
         points = []
-        for index in range(len(landmarks)):
-            x = int(landmarks[index].x * frame.shape[1])
-            y = int(landmarks[index].y * frame.shape[0])
+        for index in range(len(landmarks.landmark)):
+            x = int(landmarks.landmark[index].x * frame.shape[1])
+            y = int(landmarks.landmark[index].y * frame.shape[0])
             points.append((x, y))
         if len(save_points.last_points) > save_this_many_point_sets: 
             save_points.last_points.pop(0)
@@ -33,7 +42,7 @@ def save_points(landmarks, frame: np.ndarray, fileName: str, period: float = 3, 
 save_points.last_save_time = 0
 save_points.last_points = []
 
-def create_stick_figure(landmarks, frame: np.ndarray, save_lines: bool = False, fileName: str = None) -> np.ndarray:
+def create_stick_figure(landmarks: mp.solutions.pose.Pose, frame: np.ndarray, color: tuple = (0, 255, 0)) -> np.ndarray:
     """
     returns the stick figure line set
     saves the the last 10 line-sets in fileName if save_lines is True
@@ -42,15 +51,8 @@ def create_stick_figure(landmarks, frame: np.ndarray, save_lines: bool = False, 
     stick_figure = np.zeros_like(frame)
     lines = get_stick_figure_lines(landmarks, frame)
     for line in lines:
-        cv2.line(stick_figure, line[0:2], line[2:4], (0, 255, 0), 2)
-    if save_lines: 
-        if len(create_stick_figure.line_sets) > 10: # record last 10 line-sets
-            create_stick_figure.line_sets.pop(0)
-        create_stick_figure.line_sets.append(lines)
-        with open(fileName, 'w') as outfile:
-            json.dump(create_stick_figure.line_sets, outfile)
+        cv2.line(stick_figure, line[0:2], line[2:4], color, 2)
     return stick_figure
-create_stick_figure.line_sets = []
 
 def blend_images(frame: np.ndarray, stick_figure: np.ndarray, alpha=0.5) -> np.ndarray:
     blended = cv2.addWeighted(frame, alpha, stick_figure, 1 - alpha, 0)
@@ -63,14 +65,14 @@ def record_poses(fileName: str = None) -> None:
         _, frame = cap.read()
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pose = mp_pose.process(image=rgb)
-        landmarks = pose.pose_landmarks.landmark if pose.pose_landmarks is not None else None
+        landmarks = pose.pose_landmarks
         if landmarks is not None:
             stick_figure = create_stick_figure(landmarks, frame)
             if time.time() - record_poses.last_save_time > 3:
                 record_poses.last_save_time = time.time()
                 # save lines and make the imshow flash white
                 save_points(landmarks, frame, fileName)
-                flash_screen('Stick Figure', frame, 5)
+                flash_screen('Stick Figure', frame)
             blended = blend_images(frame, stick_figure)
             # mirror image horizontally
             blended = cv2.flip(blended, 1)
@@ -106,10 +108,10 @@ def get_score(landmarks1: mp.solutions.pose.Pose, landmarks2: mp.solutions.pose.
         score += math.sqrt((x1 - x2)**2 + (y1 - y2)**2)
     return score
 
-def flash_screen(cv2_window_name: str, frame: np.ndarray, num_frames_keep_white: int) -> None:
+def flash_screen(cv2_window_name: str, frame: np.ndarray, num_frames_keep_flash: int = 5) -> None:
     white = np.zeros_like(frame)
     white.fill(255)
-    for _ in range(num_frames_keep_white): 
+    for _ in range(num_frames_keep_flash): 
         cv2.imshow(cv2_window_name, white)
         cv2.waitKey(1)
     return
@@ -129,12 +131,12 @@ def playback_poses(fileName: str = None) -> None:
         _, frame = cap.read()
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         pose = mp_pose.process(image=rgb)
-        landmarks = pose.pose_landmarks.landmark if pose.pose_landmarks is not None else None
+        landmarks = pose.pose_landmarks
         if time.time() - last_draw_time > 5:
             last_draw_time = time.time()
             if points_list: 
                 points = points_list.pop(0)
-                flash_screen('Stick Figure', frame, 5)
+                flash_screen('Stick Figure', frame)
             else: 
                 break
         if landmarks is not None:
@@ -143,7 +145,7 @@ def playback_poses(fileName: str = None) -> None:
             stick_figure_realtime = np.zeros_like(frame)
         blended = blend_images(frame, stick_figure_realtime)
         if points is not None:
-            stick_figure_recorded = create_stick_figure(points, frame)
+            stick_figure_recorded = create_stick_figure(points, frame, color=(255, 0, 0))
             blended = blend_images(blended, stick_figure_recorded)
         # mirror image horizontally
         blended = cv2.flip(blended, 1)
