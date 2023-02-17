@@ -17,15 +17,15 @@ def get_stick_figure_lines(landmarks, frame):
 
 def create_stick_figure(landmarks: mp.solutions.pose.Pose, frame: np.ndarray, save_lines: bool = False, fileName: str = None) -> np.ndarray:
     """
-    returns the stick figure lines
-    records the the last 10 line-sets every 3 seconds in a json file if save_lines is True
+    returns the stick figure line set
+    saves the the last 10 line-sets every 3 seconds in a fileName if save_lines is True
     """
     stick_figure = np.zeros_like(frame)
     lines = get_stick_figure_lines(landmarks, frame)
     for line in lines:
         cv2.line(stick_figure, line[0:2], line[2:4], (0, 255, 0), 2)
-    if save_lines and time.time() - create_stick_figure.last_save_time > 3:
-        if len(create_stick_figure.line_sets) > 10:
+    if save_lines and time.time() - create_stick_figure.last_save_time > 3: # save every 3 seconds
+        if len(create_stick_figure.line_sets) > 10: # record last 10 line-sets
             create_stick_figure.line_sets.pop(0)
         create_stick_figure.line_sets.append(lines)
         create_stick_figure.last_save_time = time.time()
