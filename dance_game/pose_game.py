@@ -129,15 +129,19 @@ def playback_poses(fileName: str = None) -> None:
     overlayed is the current poses in red. 
     """
     mp_pose = mp.solutions.pose.Pose()
+    print("DEBUG: loaded mp_pose")
     cap = cv2.VideoCapture(0)
+    print("DEBUG: loaded cap")
     with open(fileName) as json_file:
         points_list = json.load(json_file)
+    print("DEBUG: loaded points_list with length", len(points_list))
     last_draw_time = time.time()
     points = points_list.pop(0)
     score = -1
     score_location = (10, 30)
     score_rotation = 0
     score_color = (0, 255, 0)
+    print("DEBUG: initialized variables")
     while True:
         _, frame = cap.read()
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -168,9 +172,9 @@ def playback_poses(fileName: str = None) -> None:
         # mirror image horizontally
         blended = cv2.flip(blended, 1)
         if score >= 0: 
-            # put rotated score at location
+            # put rotated score at location whose size scales with the score
             score_frame = np.zeros_like(blended)
-            cv2.putText(score_frame, str(int(score)), score_location, cv2.FONT_HERSHEY_SIMPLEX, 3, score_color, 2, cv2.LINE_AA)
+            cv2.putText(score_frame, str(int(score)), score_location, cv2.FONT_HERSHEY_SIMPLEX, 4, score_color, 5, cv2.LINE_AA)
             M = cv2.getRotationMatrix2D(score_location, score_rotation, 1)
             score_frame = cv2.warpAffine(score_frame, M, (score_frame.shape[1], score_frame.shape[0]))
             blended = cv2.add(blended, score_frame)
