@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <head>
+    <title>My Pose Game</title>
+  </head>
+  <body>
+    <h1>My Pose Game</h1>
+    <div>
+      <img id="video_feed" width="640" height="480">
+    </div>
+    <script>
+      var video = document.getElementById("video_feed");
+      var ws_scheme = window.location.protocol == "https:" ? "wss" : "ws";
+      var ws_url = ws_scheme + "://" + window.location.host + "/video_feed";
+      var socket = new WebSocket(ws_url);
+      socket.onmessage = function(event) {
+        video.src = "data:image/jpeg;base64," + event.data;
+      }
+    </script>
+  </body>
+</html>
