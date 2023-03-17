@@ -1,4 +1,4 @@
-module RgbToYCbCr (
+module Rgb_To_YCbCr (
     input clk,
     input rst,
     input [7:0] r,

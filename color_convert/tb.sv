@@ -6,7 +6,7 @@ module test;
   
   logic [7:0] r, g, b, y, cb, cr; 
   
-  RgbToYCbCr dut (
+  Rgb_To_YCbCr dut (
       // module ports
     .clk(clk),
     .rst(reset),
