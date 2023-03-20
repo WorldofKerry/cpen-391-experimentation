@@ -7,12 +7,12 @@ module test;
   logic [7:0] r, g, b, y, cb, cr; 
   
   rgb_to_ycbcr dut (
-    .r(r),
-    .g(g),
-    .b(b),
-    .y(y),
-    .cb(cb),
-    .cr(cr)
+    .iR(r),
+    .iG(g),
+    .iB(b),
+    .oY(y),
+    .oCb(cb),
+    .oCr(cr)
     );
   
   logic [7:0] r_in [0:7] = '{64, 128, 192, 255, 0, 128, 0, 255};
