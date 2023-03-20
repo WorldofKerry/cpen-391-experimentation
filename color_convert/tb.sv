@@ -40,7 +40,6 @@ module test;
       g = g_in[i];
       b = b_in[i]; 
       @(posedge clk); 
-      @(posedge clk); 
       $display("%d,%d,%d %d,%d,%d", r, g, b, y, cb, cr); 
     end
     
